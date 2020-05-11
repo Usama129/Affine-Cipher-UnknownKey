@@ -10,10 +10,9 @@ public class FileProcessing {
 	
 	ArrayList<String> words = new ArrayList<>();
 	String cipherText = "";
-	char cipherOfE;
+	int affineCipherOfE, affineCipherOfT;
 	int occurenceOfE, occurenceOfT;
 	int keyA, keyB;
-	String decryptedText = "";
 	
 	public int getKeyA() {
 		return keyA;
@@ -39,14 +38,6 @@ public class FileProcessing {
 		this.cipherText = cipherText;
 	}
 	
-	public void setDecryptedText(String decryptedText) {
-		this.decryptedText = decryptedText;
-	}
-
-	public String getDecryptedText() {
-		return decryptedText;
-	}
-
 	public FileProcessing() {
 		
 		try {
@@ -94,7 +85,9 @@ public class FileProcessing {
 		
 		occurenceOfE = counts[maxAt];
 		occurenceOfT = counts[secondMaxAt];
-		cipherOfE = (char)maxAt;
+		affineCipherOfE = (char)maxAt - 97;
+		affineCipherOfT = (char)secondMaxAt - 97;
+		
 		
 		System.out.println("\nMaximum occurence: " +(char)maxAt);
 		System.out.println("Second maximum occurrence: " +(char)secondMaxAt);
@@ -104,33 +97,61 @@ public class FileProcessing {
 				+ (char)secondMaxAt + " corresponds to the letter T\n");
 	}
 	
-	public void findCipherKeys(){
-		String decrypted;
-		for (int a = 1; a < 26; a += 2) { // a does not have even number modular multiplicative inverses with mod 26 
+	public String affineDecrypt(boolean bruteForce){
+		mainloop: for (int a = 1; a < 26; a += 2) { // a does not have even number modular multiplicative inverses with mod 26 
 			if (a == 13)
 				continue;
-			decrypted = "";
 			for (int b = 1; b <= 26; b++) {
 				
-				System.out.println("Brute-forcing A value of " + a
-						+ " with B value of " + b);
+				boolean ESatisfied = false, TSatisfied = false;
+				String decrypted = "";
 				
-				decrypted = "";
+				if (bruteForce)
+					System.out.println("Brute-forcing A value of " + a
+							+ " with B value of " + b);
+				
+				
 				for (int d = 0; d < cipherText.length(); d++) {
-					char affine = cipherText.charAt(d);
-					int decryptedAffine = decryptLetterAffine(a, b, affine - 'a');
+					int affine = cipherText.charAt(d) - 'a';
+					int decryptedAffine = decryptLetterAffine(a, b, affine);
 					
-					decrypted += (char)(decryptedAffine + 97);
+					if (bruteForce) {
+						decrypted += (char)(decryptedAffine + 97);
+					}
+					else {
+						if (affine == affineCipherOfE && decryptedAffine == 'e' - 97)
+							ESatisfied = true;
+						else if (affine == affineCipherOfT && decryptedAffine == 't' - 97)
+							TSatisfied = true;
+							
+						if (ESatisfied && TSatisfied) {
+							setKeyA(a);
+							setKeyB(b);
+							return decryptTextWithKeys(cipherText, a, b);
+						}
+					}
 				}
-				if (makesSense(decrypted)) {
-					setDecryptedText(decrypted);
+				if (bruteForce && makesSense(decrypted)) {
 					setKeyA(a);
 					setKeyB(b);
-					return;
+					return decrypted;
 				}
+				
 			}
 			
 		}
+		return null;
+	}
+	
+	private String decryptTextWithKeys(String text, int a, int b) {
+		String decrypted = "";
+		for (int i = 0; i < text.length(); i++) {
+			int affine = text.charAt(i) - 'a';
+			int decryptedAffine = decryptLetterAffine(a, b, affine);
+			
+			decrypted += (char)(decryptedAffine + 97);
+		}
+		return decrypted;
 	}
 	
 	public int findModularInverse(int a) {
